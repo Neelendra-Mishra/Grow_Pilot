@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---- Weather form (dashboard-compatible, two-panel layout) ----
 from tkinter import *
 from tkinter import messagebox

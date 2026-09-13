@@ -22,13 +22,13 @@ def checking_form():
     elif check.get()==0:
         messagebox.showerror("Error","Accept Terms & Condition")
     else:
-        connect_database()
-        cursor,connection=connect_database()
+        cursor, connection = connect_database()
+        if not cursor or not connection:
+            return
         try:
-            cursor.execute("use inventory")
-            cursor.execute("create table if not exists User_signin_details (id int auto_increment primary key not null, email varchar(100), username varchar(70), password varchar(40))")
-        except:
-            cursor.execute("use inventory")
+            cursor.execute("create table if not exists User_signin_details (id serial primary key, email varchar(100), username varchar(70), password varchar(40))")
+        except Exception:
+            pass
         query="select * from User_signin_details where username=%s"
         cursor.execute(query,(username_entry.get()))
         row=cursor.fetchone()

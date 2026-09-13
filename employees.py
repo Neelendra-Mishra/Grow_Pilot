@@ -2,30 +2,22 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 from tkcalendar import DateEntry
-import pymysql
+from datetime import date
+from typing import Any
+from db import connect_database
 
-#DATABASE CODE:
-def connect_database():
-    try:
-        connection=pymysql.connect(host='localhost',user="root",password="sqlPrem2025")
-        cursor=connection.cursor()
-    except:
-        messagebox.showerror("Error!","Database connectivity issue, open mysql command line")
-        return None,None
-
-    return cursor, connection
-
+# Module-level references for static analysis and runtime safety
+employee_treeview: Any = None
+back_image: Any = None
 
 def create_database_table():
-    cursor,connection=connect_database()
-    cursor.execute("create database if not exists inventory")
-    cursor.execute("use inventory")
-    cursor.execute("create table if not exists Employee_Data (empid INT PRIMARY KEY, name VARCHAR(75), farmrole VARCHAR(100), gender VARCHAR(15), dob VARCHAR(10),contact varchar(20), employement_type VARCHAR(50),education varchar (40),work_shift VARCHAR(50), address VARCHAR(100), doj VARCHAR(30), salary DECIMAL(10,2), usertype VARCHAR(30), maincrop VARCHAR(100))")
-    # cursor.execute("ALTER TABLE Employee_Data ADD COLUMN maincrop VARCHAR(100);")
-    # cursor.execute('''ALTER TABLE Employee_Data
-    #         RENAME COLUMN farmrole TO farmrole,
-    #         RENAME COLUMN maincrop TO maincrop;''')
-    # connection.commit()
+    cursor, connection = connect_database()
+    if not cursor or not connection:
+        return
+    cursor.execute("create table if not exists Employee_Data (empid INT PRIMARY KEY, name VARCHAR(75), farmrole VARCHAR(100), gender VARCHAR(15), dob VARCHAR(10), contact varchar(20), employement_type VARCHAR(50), education varchar (40), work_shift VARCHAR(50), address VARCHAR(100), doj VARCHAR(30), salary NUMERIC(10,2), usertype VARCHAR(30), maincrop VARCHAR(100))")
+    connection.commit()
+    cursor.close()
+    connection.close()
 
 #showing all the database value on screen record
 def treeview_data():
@@ -36,9 +28,10 @@ def treeview_data():
         try:  
             cursor.execute("select * from Employee_Data")
             employee_records=cursor.fetchall()
-            employee_treeview.delete(*employee_treeview.get_children())
-            for record in employee_records:
-                employee_treeview.insert('',END,values=record)
+            if employee_treeview is not None:
+                employee_treeview.delete(*employee_treeview.get_children())
+                for record in employee_records:
+                    employee_treeview.insert('',END,values=record)
         except Exception as e:
             messagebox.showerror("Error",f'Error due to {e}')
         finally:
@@ -48,6 +41,8 @@ def treeview_data():
 
 #Selecting all the datavalue
 def select_data(event,empid_entry, name_entry, farm_role_entry, dob_date_entry, gender_combobox, contact_entry, employement_combobox, education_combobox, workshift_combobox, address_text, doj_date_entry, Salary_entry, usertype_combobox, main_crop_entry):
+    if employee_treeview is None:
+        return
     index=employee_treeview.selection()
     content=employee_treeview.item(index)
     row=content['values']
@@ -102,7 +97,6 @@ def clear_fields(empid_entry, name_entry, farm_role_entry, dob_date_entry, gende
     empid_entry.delete(0,END)
     name_entry.delete(0,END)
     farm_role_entry.delete(0,END)
-    from datetime import date
     dob_date_entry.set_date(date.today())
     gender_combobox.set('Select Gender')
     contact_entry.delete(0,END)
@@ -114,13 +108,15 @@ def clear_fields(empid_entry, name_entry, farm_role_entry, dob_date_entry, gende
     Salary_entry.delete(0,END)
     usertype_combobox.set('Select User Type')
     main_crop_entry.delete(0,END)
-    if check:
+    if check and employee_treeview is not None:
         employee_treeview.selection_remove(employee_treeview.selection())
 
 
 #Updating employee information
 
 def update_employee(empid,name,farmrole,gender,dob,contact,employement_type,education,work_shift,address,doj,salary,usertype,maincrop):
+    if employee_treeview is None:
+        return
     selected=employee_treeview.selection()
     if not selected:
         messagebox.showerror("Error","No row was selected")
@@ -152,6 +148,8 @@ def update_employee(empid,name,farmrole,gender,dob,contact,employement_type,educ
 
 #Deleting employee information
 def delete_employee(empid):
+    if employee_treeview is None:
+        return
     selected=employee_treeview.selection()
     if not selected:
         messagebox.showerror("Error","No row was selected")
@@ -186,11 +184,12 @@ def search_employee(search_option,value):
                 return  
             try:
                 cursor.execute("use inventory")
-                cursor.execute(f'select * from Employee_Data where {search_option} LIKE %s',(f'%{value}',))
+                cursor.execute(f'select * from Employee_Data where {search_option} LIKE %s',(f'%{value}%',))
                 records=cursor.fetchall()
-                employee_treeview.delete(*employee_treeview.get_children())
-                for record in records:
-                    employee_treeview.insert('',END,value=record)
+                if employee_treeview is not None:
+                    employee_treeview.delete(*employee_treeview.get_children())
+                    for record in records:
+                        employee_treeview.insert('',END,values=record)
             except Exception as e:
                 messagebox.showerror("Error",f'Error due to {e}')
             finally:
@@ -224,9 +223,9 @@ def employee_form(window):
     back_button.place(x=10,y=0 )
     search_frame=Frame(top_frame,bg="white")
     search_frame.pack()
-    search_combobox=ttk.Combobox(search_frame,value=("Empid",'Name','Farmrole',"Gender",'Dob','Contact','Employement_type',
-                                                     'Education','Workshift','Address','DOJ','Salary','Usertype',"Maincrop"),font=("new times roman",12),state="readonly")
-    search_combobox.set("seach by")
+    search_combobox=ttk.Combobox(search_frame,values=("Empid",'Name','Farmrole',"Gender",'Dob','Contact','Employement_type',
+                                                     'Education','Work_shift','Address','DOJ','Salary','Usertype',"Maincrop"),font=("new times roman",12),state="readonly")
+    search_combobox.set("Search By")
     search_combobox.grid(row=0,column=0,padx=20)
 
     search_entry=Entry(search_frame,font=("new times roman",12),bg="lightyellow")
