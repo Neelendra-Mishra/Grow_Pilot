@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 # ---- Weather form (dashboard-compatible, two-panel layout) ----
+import os
 from tkinter import *
 from tkinter import messagebox
 from PIL import Image, ImageTk
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def weather_form(window):
     from datetime import datetime, timezone, timedelta
     import requests
-    OPENWEATHER_API_KEY = "YOUR_API_KEY_HERE"  # <-- your key
+    OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "").strip()
 
     wf = Frame(window, width=1070, height=567, bg="white")
     wf.place(x=250, y=98, relwidth=1, width=-250, relheight=0.85)
@@ -84,6 +88,10 @@ def weather_form(window):
 
     # ---- fetch function (uses your original logic & values) ----
     def getWeather():
+        if not OPENWEATHER_API_KEY:
+            messagebox.showerror("Configuration Error", "OpenWeatherMap API key not found.\nPlease set OPENWEATHER_API_KEY in your .env file.")
+            return
+
         city = city_entry.get().strip()
         if not city:
             messagebox.showerror("Error", "Please enter a city name.")
@@ -139,6 +147,7 @@ def weather_form(window):
                      font=("new times roman", 12, "bold"), fg="white", bg="#0f4d7d",
                      activebackground="#0f4d7d", cursor="hand2", bd=0, command=getWeather)
     get_btn.pack(side=LEFT, padx=20)
+    city_entry.bind('<Return>', lambda event: getWeather())
 
     clr_btn = Button(btns, text="CLEAR", width=10,
                      font=("new times roman", 12, "bold"), fg="white", bg="#0f4d7d",
