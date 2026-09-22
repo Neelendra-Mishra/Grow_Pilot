@@ -1,25 +1,33 @@
 from tkinter import *
 from tkinter import messagebox
 from PIL import Image, ImageTk
+import numpy as np
+import pandas as pd
+import joblib
+from sklearn.ensemble import RandomForestClassifier
+
+# Cache model in memory so it loads only once per app session
+_CACHED_MODEL = None
+
+def _load_or_train_model():
+    global _CACHED_MODEL
+    if _CACHED_MODEL is not None:
+        return _CACHED_MODEL
+    try:
+        _CACHED_MODEL = joblib.load("model.pkl")  # safest load for sklearn
+        return _CACHED_MODEL
+    except Exception:
+        # Retrain on current environment to fix incompatibility
+        df = pd.read_csv("Crop_recommendation.csv")
+        X = df[["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]]
+        y = df["label"]
+        model = RandomForestClassifier(n_estimators=200, random_state=42)
+        model.fit(X, y)
+        joblib.dump(model, "model.pkl")
+        _CACHED_MODEL = model
+        return _CACHED_MODEL
 
 def crop_prediction_form(window):
-    import numpy as np
-    import pandas as pd
-    import joblib
-    from sklearn.ensemble import RandomForestClassifier
-    # ---- Load or train model ----
-    def _load_or_train_model():
-        try:
-            return joblib.load("model.pkl")  # safest load for sklearn
-        except Exception:
-            # Retrain on current environment to fix incompatibility
-            df = pd.read_csv("Crop_recommendation.csv")
-            X = df[["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]]
-            y = df["label"]
-            model = RandomForestClassifier(n_estimators=200, random_state=42)
-            model.fit(X, y)
-            joblib.dump(model, "model.pkl")
-            return model
 
     try:
         model = _load_or_train_model()
